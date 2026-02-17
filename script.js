@@ -28,6 +28,44 @@ document.addEventListener('DOMContentLoaded', () => {
 		};
 	}
 
+	function hexToHsl(hex) {
+		let r = 0, g = 0, b = 0;
+		if (hex.length === 4) {
+			r = "0x" + hex[1] + hex[1];
+			g = "0x" + hex[2] + hex[2];
+			b = "0x" + hex[3] + hex[3];
+		} else if (hex.length === 7) {
+			r = "0x" + hex[1] + hex[2];
+			g = "0x" + hex[3] + hex[4];
+			b = "0x" + hex[5] + hex[6];
+		}
+		r /= 255;
+		g /= 255;
+		b /= 255;
+		let cmin = Math.min(r, g, b),
+			cmax = Math.max(r, g, b),
+			delta = cmax - cmin,
+			h = 0,
+			s = 0,
+			l = 0;
+
+		if (delta === 0) h = 0;
+		else if (cmax === r) h = ((g - b) / delta) % 6;
+		else if (cmax === g) h = (b - r) / delta + 2;
+		else h = (r - g) / delta + 4;
+
+		h = Math.round(h * 60);
+
+		if (h < 0) h += 360;
+
+		l = (cmax + cmin) / 2;
+		s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+		s = +(s * 100).toFixed(1);
+		l = +(l * 100).toFixed(1);
+
+		return { h: Math.round(h), s: Math.round(s), l: Math.round(l) };
+	}
+
 	function hslToHex(h, s, l) {
 		l /= 100;
 		const a = s * Math.min(l, 1 - l) / 100;
@@ -63,10 +101,16 @@ document.addEventListener('DOMContentLoaded', () => {
 			col.innerHTML = `
                 <div class="color-hex" title="Click to copy">${hex}</div>
                 <div class="color-controls">
-                    <button class="control-btn toggle-lock" data-index="${index}">
-                        <i data-lucide="lock" class="locked-icon"></i>
-                        <i data-lucide="unlock" class="unlocked-icon"></i>
-                    </button>
+					<div class="control-actions">
+						<button class="control-btn toggle-lock" data-index="${index}" title="Toggle lock">
+							<i data-lucide="lock" class="locked-icon"></i>
+							<i data-lucide="unlock" class="unlocked-icon"></i>
+						</button>
+						<button class="control-btn edit-btn" data-index="${index}" title="Edit color">
+							<i data-lucide="pencil"></i>
+						</button>
+					</div>
+					<input type="color" class="color-input" data-index="${index}" value="${hex}" style="position: absolute; opacity: 0; pointer-events: none; bottom: 0; left: 0;">
                     <div class="slider-group">
                         <label>Saturation</label>
                         <input type="range" class="sat-slider" data-index="${index}" min="0" max="100" value="${color.s}" style="accent-color: ${hex}">
@@ -89,6 +133,30 @@ document.addEventListener('DOMContentLoaded', () => {
 				const idx = e.currentTarget.dataset.index;
 				colors[idx].locked = !colors[idx].locked;
 				renderPalette();
+			};
+		});
+
+		document.querySelectorAll('.edit-btn').forEach(btn => {
+			btn.onclick = (e) => {
+				const idx = e.currentTarget.dataset.index;
+				const input = paletteContainer.children[idx].querySelector('.color-input');
+				input.click();
+			};
+		});
+
+		document.querySelectorAll('.color-input').forEach(input => {
+			input.oninput = (e) => {
+				const idx = e.target.dataset.index;
+				const hex = e.target.value;
+				const { h, s, l } = hexToHsl(hex);
+				colors[idx].h = h;
+				colors[idx].s = s;
+				colors[idx].l = l;
+				updateColorRealtime(idx);
+
+				const col = paletteContainer.children[idx];
+				col.querySelector('.sat-slider').value = s;
+				col.querySelector('.light-slider').value = l;
 			};
 		});
 
@@ -121,6 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		const isDark = color.l < 50;
 		col.style.color = isDark ? '#ffffff' : '#000000';
 		col.querySelector('.color-hex').textContent = hex;
+		col.querySelector('.color-input').value = hex;
 
 		col.querySelectorAll('input[type="range"]').forEach(slider => {
 			slider.style.accentColor = hex;

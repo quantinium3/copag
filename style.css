@@ -125,6 +125,11 @@ body {
     align-items: center;
 }
 
+.control-actions {
+    display: flex;
+    gap: 1rem;
+}
+
 .control-btn {
     background: none;
     border: none;
