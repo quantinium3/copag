@@ -1,2 +1,0 @@
-# copag
-color pallete generator
